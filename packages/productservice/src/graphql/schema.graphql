@@ -1,0 +1,196 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", 
+    import: [ "@external", "@inaccessible", "@key", "@provides"])
+
+
+enum CacheControlScope {
+    PUBLIC
+    PRIVATE
+}
+
+directive @cacheControl(
+    maxAge: Int
+    scope: CacheControlScope
+    inheritMaxAge: Boolean
+) on FIELD_DEFINITION | OBJECT | INTERFACE | UNION
+
+scalar Upload
+
+type Product @key(fields: "productId") @cacheControl(maxAge: 1200) {
+    productId: ID!
+    
+    productName: String!
+    productPrice: Float!
+    categoryName: String!
+    discountedPrice: Float!
+    imageUrls: [String!]!
+    availability: Boolean!
+    keyFeatures: [String!]!
+
+    sellerId: ID!
+    seller: Seller!
+
+
+    stock: Int
+    tags: [String]
+
+    warranty: String
+    brandName: String
+    category: Category
+}
+
+type Category {
+    categoryId: String!
+    categoryName: String
+    imageUrl: String
+}
+
+type ProductFileResponse {
+    filename: String!
+    mimetype: String!
+    encoding: String!
+    url: String
+}
+
+type ProductList {
+    status: String
+    data: [Product]
+}
+
+type CategoryList {
+    status: String
+    data: [Category]
+}
+
+union ProductData = Product | Category
+
+
+type ProductSuccessResponse {
+    status: String!
+    data: ProductData!
+}
+
+type ProductErrorResponse {
+    errorCode: Int!
+    errorMessage: String!
+}
+
+union ProductResponse = ProductSuccessResponse | ProductErrorResponse
+
+type PaginationProductResponse {
+    total: Int!
+    nextToken: String
+    response: ProductList
+}
+
+type PaginationCategoryResponse {
+    total: Int!
+    nextToken: String
+    response: CategoryList
+}
+
+union PaginationResponse = PaginationProductResponse | PaginationCategoryResponse | ProductErrorResponse
+
+input ProductInput {
+    productName: String
+    description: String
+    productPrice: Int
+    categoryName: String
+    availability: Boolean
+    discountedPrice: Int
+
+    stock: Int
+    tags: [String]
+    warranty: String
+    brandName: String
+    keyFeatures: [String]
+
+    sellerId: ID!
+    imageUrls: [String!]!
+}
+
+input ProductUpdateInput {
+    productId: String!
+
+    productName: String
+    description: String
+    productPrice: Int
+    categoryName: String!
+    availability: Boolean
+    discountedPrice: Int
+
+    stock: Int
+    tags: [String]
+    warranty: String
+    brandName: String
+    keyFeatures: [String]
+
+    sellerId: String
+    imageUrls: [String]
+}
+
+input CategoryInput {
+    categoryName: String
+
+    imageUrl: String!
+    createdAt: String
+    updatedAt: String
+}
+
+input CategoryUpdateInput {
+    categoryId: String!
+    categoryName: String!
+    imageUrl: String
+}
+
+input ProductDeleteInput {
+    productId: String!
+    categoryName: String!
+}
+
+input CategoryDeleteInput {
+    categoryId: ID!
+    categoryName: String!
+}
+
+enum SortOrder {
+    ASC
+    DESC
+}
+
+
+input ProductPagination {
+    limit: Int!
+    sort: SortOrder!
+    nextToken: String
+}
+
+extend type Query {
+    getProductById(productId: ID!): ProductResponse
+    listProducts(pagination: ProductPagination): PaginationResponse
+    getProductsByName(productName: String!, pagination: ProductPagination): PaginationResponse
+    getProductsByCategoryName(categoryName: String!, pagination: ProductPagination): PaginationResponse
+
+    listAllCategories(pagination: ProductPagination): PaginationResponse
+    getProductsWhichNameStartsWith(productName: String!, pagination: ProductPagination): PaginationResponse
+}
+
+extend type Mutation {
+    createProduct(input: ProductInput!): ProductResponse
+    updateProduct(input: ProductUpdateInput!): ProductResponse
+    deleteProduct(input: ProductDeleteInput!): Boolean
+
+    createProducts(input: [ProductInput!]!): PaginationResponse
+    deleteProducts(input: [ProductDeleteInput]!): Boolean
+
+    createCategory(input: CategoryInput!): ProductResponse
+    updateCategory(input: CategoryUpdateInput!): ProductResponse
+    deleteCategory(input: CategoryDeleteInput!): Boolean
+
+    singleUploadImage(file: Upload): ProductFileResponse
+    batchUploadImage(files: [Upload]): [ProductFileResponse]
+}
+
+extend type Seller @key(fields: "sellerId") {
+    sellerId: ID! @external
+}
+

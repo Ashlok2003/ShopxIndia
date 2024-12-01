@@ -1,0 +1,27 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", 
+            import: [ "@external", "@inaccessible", "@key", "@provides", "@requires"])
+
+type Notification @key(fields: "userId") {
+    notificationId: ID!
+    userId: ID! 
+    user: User!
+    message: String!
+    read: Boolean!
+}
+
+type NotificationList @key(fields: "userId") {
+    userId: ID!
+    notifications: [Notification]
+}
+
+extend type Query {
+    getNotificationsByUser(userId: ID!): [Notification!]!
+}
+
+extend type Mutation {
+    markNotificationAsRead(notificationId: ID!): Notification
+}
+
+extend type User @key(fields: "userId") {
+    userId: ID! @external
+}

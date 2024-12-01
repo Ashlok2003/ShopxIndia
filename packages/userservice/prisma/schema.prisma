@@ -1,0 +1,99 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  userId    String  @id @default(uuid())
+  firstName String
+  lastName  String
+  email     String  @unique
+  password  String
+  phoneNo   String? @unique
+
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  addresses Address[]
+  settings  UserSettings?
+  cart      ShoppingCart?
+  role      UserRole      @default(USER)
+
+  emailOTP        Int?
+  smsOTP          Int?
+  isEmailVerified Boolean @default(false)
+  isPhoneVerified Boolean @default(false)
+}
+
+model Address {
+  id         String   @id @default(cuid())
+  userId     String
+  street     String
+  city       String
+  state      String
+  country    String
+  postalCode String
+  isDefault  Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [userId])
+}
+
+model CartItem {
+  id           String       @id @default(cuid())
+  cartId       String
+  productId    String
+  quantity     Int          @default(1)
+  productName  String
+  productPrice Float
+  totalPrice   Float        @default(0)
+  imageUrl     String?
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+  cart         ShoppingCart @relation(fields: [cartId], references: [id])
+}
+
+model ShoppingCart {
+  id        String     @id @default(cuid())
+  userId    String     @unique
+  items     CartItem[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+
+  user User @relation(fields: [userId], references: [userId])
+}
+
+model UserSettings {
+  id            String   @id @default(cuid())
+  userId        String   @unique
+  receiveEmails Boolean  @default(true)
+  receiveSms    Boolean  @default(true)
+  theme         Theme    @default(LIGHT)
+  notifications Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  user          User     @relation(fields: [userId], references: [userId])
+}
+
+enum UserRole {
+  ADMIN
+  SELLER
+  USER
+}
+
+enum Theme {
+  LIGHT
+  DARK
+}

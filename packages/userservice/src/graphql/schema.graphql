@@ -1,0 +1,253 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", 
+        import: [ "@external", "@inaccessible", "@key", "@provides", "@requires"])
+
+enum CacheControlScope {
+    PUBLIC
+    PRIVATE
+}
+
+directive @cacheControl(
+    maxAge: Int
+    scope: CacheControlScope
+    inheritMaxAge: Boolean
+) on FIELD_DEFINITION | OBJECT | INTERFACE | UNION
+    
+scalar Upload
+
+type User @key(fields: "userId") @cacheControl(maxAge: 1200) {
+    userId: ID!
+    email: String!
+    firstName: String
+    lastName: String
+    phoneNo: String
+
+    isActive: Boolean
+    isEmailVerified: Boolean
+    isPhoneVerified: Boolean
+
+    settings: UserSettings
+    role: UserRole
+
+    addresses: [Address]
+    cart: ShoppingCart!
+    orders: OrdersList
+    payments: PaymentList
+    notifications: NotificationList
+}
+
+enum UserRole {
+    ADMIN
+    SELLER
+    USER
+}
+
+type Address {
+    id: ID!
+    userId: ID!
+    street: String
+    city: String
+    state: String
+    country: String
+    postalCode: String
+    isDefault: Boolean
+}
+
+type ShoppingCart {
+    id: ID!
+    userId: ID!
+    items: [CartItem]
+}
+
+type CartItem {
+    id: ID!
+    cartId: ID!
+    productId: ID
+    quantity: Int
+    productName: String
+    productPrice: String
+    totalPrice: Float
+    imageUrl: String
+}
+
+enum Theme {
+    LIGHT
+    DARK
+}
+
+type UserSettings {
+    id: ID!
+    userId: ID!
+    receiveEmails: Boolean!
+    receiveSms: Boolean!
+    theme: Theme!
+    notifications: Boolean!
+}
+
+type FileResponse {
+    filename: String!
+    mimetype: String!
+    encoding: String!
+    url: String
+}
+
+input UserCreateInput {
+    firstName: String!
+    lastName: String!
+    email: String!
+    password: String!
+    phoneNo: String!
+}
+
+input UserUpdateInput {
+    userId: ID!
+    firstName: String
+    lastName: String
+    email: String
+    phoneNo: String
+}
+
+input UpdateUserSettingsInput {
+    userId: ID!
+    receiveEmails: Boolean
+    receiveSms: Boolean
+    theme: Theme
+    notifications: Boolean
+}
+
+input CreateAddressInput {
+    userId: String!
+    street: String!
+    city: String!
+    state: String!
+    country: String!
+    postalCode: String!
+    isDefault: Boolean
+}
+
+input UpdateAddressInput {
+    addressId: ID!
+    street: String
+    city: String
+    state: String
+    country: String
+    postalCode: String
+    isDefault: Boolean
+}
+
+input AddCartItemInput {
+    userId: ID!
+    productId: String!
+    quantity: Int!
+    productName: String!
+    productPrice: Int!
+    imageUrl: String!
+}
+
+input UpdateCartItemInput {
+    cartItemId: ID!
+    quantity: Int!
+}
+
+input GetCartDetailsInput {
+    userId: ID!
+}
+
+input RemoveCartItemInput {
+    cartItemId: ID!
+}
+
+input ClearCartInput {
+    userId: ID!
+}
+
+input UserOTPValidation {
+    userId: String!
+    emailOTP: Int!
+    smsOTP: Int!
+}
+
+input Pagination {
+    skip: Int!
+    take: Int!
+}
+
+union DataUser = User | ShoppingCart | CartItem | Address | UserSettings
+
+type UserListResponse {
+    total: Int!
+    data: [User]
+}
+
+type AddressListResponse {
+    total: Int!
+    data: [Address]
+}
+
+type SuccessResponse {
+    status: Int!
+    data: DataUser!
+}
+
+type ErrorResponse {
+    errorCode: Int
+    errorMessage: String
+}
+
+union UserResponse = SuccessResponse | ErrorResponse
+union PaginationUserResponse = UserListResponse | AddressListResponse | ErrorResponse
+
+extend type Query {
+    getUserDetails(userId: ID!): UserResponse
+    getCartDetails(input: GetCartDetailsInput): UserResponse
+    searchUsers(query: String!, pagination: Pagination): PaginationUserResponse
+    getAllUsers(pagination: Pagination): PaginationUserResponse
+}
+
+extend type Mutation {
+
+    addItemToCart(input: AddCartItemInput!): UserResponse
+    updateItemQuantity(input: UpdateCartItemInput!): UserResponse
+    removeItemFromCart(input: RemoveCartItemInput!): Boolean
+    clearCart(input: ClearCartInput!): Boolean!
+
+    createUser(input: UserCreateInput!): UserResponse
+    updateUser(input: UserUpdateInput!): UserResponse
+    requestOTP(userId: ID!): Boolean
+    validateOTP(input: UserOTPValidation!): Boolean
+
+    updateUserSettings(input: UpdateUserSettingsInput!): UserResponse
+
+    addAddress(input: CreateAddressInput!): UserResponse
+    updateAddress(input: UpdateAddressInput!): UserResponse
+    deleteAddress(addressId: ID!): Boolean
+
+    uploadProfilePic(file: Upload): FileResponse
+}
+
+extend type Product @key(fields: "productId") {
+    productId: ID! @external
+}
+
+extend type Order @key(fields: "orderId") {
+    orderId: ID! @external
+}
+
+extend type Payment @key(fields: "userId") {
+    userId: ID! @external
+}
+
+extend type Notification @key(fields: "userId") {
+    userId: ID! @external
+}
+
+extend type OrdersList @key(fields: "userId") {
+    userId: ID! @external
+}
+
+extend type PaymentList @key(fields: "userId") {
+    userId: ID! @external
+}
+
+extend type NotificationList @key(fields: "userId") {
+    userId: ID! @external
+}

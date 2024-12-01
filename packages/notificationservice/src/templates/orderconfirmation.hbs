@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Confirmation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #f9fafb;
+            color: #333333;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .email-header {
+            background-color: #28a745;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .email-body {
+            padding: 25px 20px;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #495057;
+        }
+
+        .email-footer {
+            text-align: center;
+            background-color: #f8f9fa;
+            padding: 15px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .button {
+            display: inline-block;
+            margin-top: 20px;
+            background-color: #28a745;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .button:hover {
+            background-color: #044e16;
+        }
+
+        .order-details {
+            margin-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 20px;
+        }
+
+        .order-details p {
+            margin: 5px 0;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #212529;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <!-- Header Section -->
+        <div class="email-header">
+            Order Confirmation
+        </div>
+
+        <!-- Body Section -->
+        <div class="email-body">
+            <p>Hello <span class="highlight">{{userName}}</span>,</p>
+            <p>Thank you for shopping with us! Your order <span class="highlight">#{{orderId}}</span> has been
+                successfully confirmed.</p>
+            <p>We are preparing your order for shipment and will notify you once it's on its way. Here are your order
+                details:</p>
+
+            <div class="order-details">
+                <p><strong>Order ID:</strong> <span class="highlight">{{orderId}}</span></p>
+                <p><strong>Order Date:</strong> <span class="highlight">{{orderDate}}</span></p>
+                <p><strong>Expected Delivery Date:</strong> <span class="highlight">{{deliveryDate}}</span></p>
+                <p><strong>Shipping Address:</strong> <span class="highlight">{{shippingAddress}}</span></p>
+
+                <p><strong>Order Summary:</strong></p>
+                <ul>
+                    {{#each orderItems}}
+                    <li><span class="highlight">{{itemName}} ({{quantity}} x {{itemPrice}})</span> =
+                        <strong>{{totalItemPrice}}</strong></li>
+                    {{/each}}
+                </ul>
+
+                <p><strong>Total Amount:</strong> <span class="highlight">{{totalAmount}}</span></p>
+            </div>
+
+            <a href="{{orderLink}}" class="button">View Order Details</a>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="email-footer">
+            &copy; {{year}} ShopXIndia. All rights reserved.
+        </div>
+    </div>
+</body>
+
+</html>

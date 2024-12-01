@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "User" ADD COLUMN     "emailOTP" INTEGER,
+ADD COLUMN     "smsOTP" INTEGER;

@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f7;
+            color: #333;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 0 auto;
+            background-color: #ffffff;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+        .email-header {
+            background-color: #17a2b8;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .email-body {
+            padding: 20px;
+            font-size: 16px;
+            line-height: 1.5;
+        }
+
+        .email-footer {
+            text-align: center;
+            background-color: #f4f4f7;
+            padding: 10px;
+            font-size: 12px;
+            color: #999;
+        }
+
+        .button {
+            display: inline-block;
+            margin-top: 20px;
+            background-color: #17a2b8;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+
+        .button:hover {
+            background-color: #138496;
+        }
+    </style>
+    <title>Payment Confirmation</title>
+</head>
+
+<body>
+    <div class="email-container">
+        <!-- Header Section -->
+        <div class="email-header">
+            Payment Confirmed
+        </div>
+
+        <!-- Body Section -->
+        <div class="email-body">
+            <p>Thank you, <span style="font-weight: bold;">{{userName}}</span>!</p>
+            <p>Your payment for order <span style="font-weight: bold;">#{{orderId}}</span> of <span
+                    style="font-weight: bold;">{{amount}}</span> has been successfully processed.</p>
+            <p>You can view your receipt below:</p>
+            <a href="{{receiptLink}}" class="button">View Receipt</a>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="email-footer">
+            &copy; {{year}} Your Company. All rights reserved.
+        </div>
+    </div>
+</body>
+
+</html>

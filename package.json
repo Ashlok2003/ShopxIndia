@@ -5,6 +5,8 @@
     "shopxindia": "bin/shopxindia.js"
   },
   "scripts": {
+    "cdk-ver": "cdk --version",
+    "cdk-ls": "cdk list",
     "build": "tsc",
     "watch": "tsc -w",
     "test": "jest",
@@ -13,14 +15,17 @@
   "devDependencies": {
     "@types/jest": "^29.5.14",
     "@types/node": "22.7.9",
+    "aws-cdk": "2.171.0",
     "jest": "^29.7.0",
     "ts-jest": "^29.2.5",
-    "aws-cdk": "2.171.0",
     "ts-node": "^10.9.2",
     "typescript": "~5.6.3"
   },
   "dependencies": {
+    "@cdklabs/cdk-amazonmq": "^0.1.2",
     "aws-cdk-lib": "2.171.0",
-    "constructs": "^10.0.0"
+    "constructs": "^10.0.0",
+    "dotenv": "^16.4.5",
+    "env-var": "^7.5.0"
   }
 }

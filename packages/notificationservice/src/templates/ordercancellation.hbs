@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Cancellation</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Arial', sans-serif;
+            background-color: #f9fafb;
+            color: #333;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 30px auto;
+            background-color: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .email-header {
+            background-color: #dc3545;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        .email-body {
+            padding: 25px 20px;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #495057;
+        }
+
+        .email-footer {
+            text-align: center;
+            background-color: #f8f9fa;
+            padding: 15px;
+            font-size: 12px;
+            color: #6c757d;
+        }
+
+        .button {
+            display: inline-block;
+            margin-top: 20px;
+            background-color: #dc3545;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .button:hover {
+            background-color: #b02a37;
+        }
+
+        .highlight {
+            font-weight: bold;
+            color: #212529;
+        }
+
+        .reason {
+            font-style: italic;
+            color: #495057;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <!-- Header Section -->
+        <div class="email-header">
+            Order Cancellation Notice
+        </div>
+
+        <!-- Body Section -->
+        <div class="email-body">
+            <p>Dear <span class="highlight">{{userName}}</span>,</p>
+            <p>We regret to inform you that your order <span class="highlight">#{{orderId}}</span> has been canceled due
+                to:</p>
+            <p class="reason"><strong>{{reason}}</strong></p>
+            <p>If you have any questions or need further assistance, feel free to reach out to our support team. We
+                apologize for any inconvenience caused.</p>
+
+            <a href="{{supportLink}}" class="button">Contact Support</a>
+        </div>
+
+        <!-- Footer Section -->
+        <div class="email-footer">
+            &copy; {{year}} ShopXIndia. All rights reserved.
+        </div>
+    </div>
+</body>
+
+</html>

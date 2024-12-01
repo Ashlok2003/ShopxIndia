@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Action Required: Low Product Quantity</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #f8f9fa;
+            color: #343a40;
+        }
+
+        .email-container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+
+        .email-header {
+            background-color: #ff4757;
+            color: #ffffff;
+            text-align: center;
+            padding: 20px;
+            font-size: 20px;
+            font-weight: bold;
+        }
+
+        .email-body {
+            padding: 20px;
+            font-size: 16px;
+            line-height: 1.6;
+            color: #495057;
+        }
+
+        .email-footer {
+            text-align: center;
+            background-color: #f1f3f5;
+            padding: 10px;
+            font-size: 12px;
+            color: #868e96;
+        }
+
+        .button {
+            display: inline-block;
+            margin-top: 20px;
+            background-color: #ff4757;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .button:hover {
+            background-color: #e03e50;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="email-container">
+        <div class="email-header">
+            Action Required: Low Product Quantity
+        </div>
+        <div class="email-body">
+            <p>Dear {{sellerName}},</p>
+            <p>We hope this email finds you well. This is to inform you that some products in your inventory have
+                reached low stock levels.</p>
+            <p>To avoid disruptions in sales, please review your stock and restock the following items as soon as
+                possible:</p>
+            <ul>
+                {{#each lowStockProducts}}
+                <li><strong>{{this.productName}}</strong>: Only <strong>{{this.quantity}}</strong> left in stock.</li>
+                {{/each}}
+            </ul>
+            <p>For more details, you can visit your inventory dashboard by clicking the button below:</p>
+            <a href="{{inventoryDashboardLink}}" class="button">View Inventory</a>
+        </div>
+        <div class="email-footer">
+            &copy; {{year}} ShopXIndia. All rights reserved.
+        </div>
+    </div>
+</body>
+
+</html>

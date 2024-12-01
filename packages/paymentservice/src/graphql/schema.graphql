@@ -1,0 +1,87 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", 
+        import: [ "@external", "@inaccessible", "@key", "@provides", "@requires"])
+
+
+enum CacheControlScope {
+    PUBLIC
+    PRIVATE
+}
+
+directive @cacheControl(
+    maxAge: Int
+    scope: CacheControlScope
+    inheritMaxAge: Boolean
+) on FIELD_DEFINITION | OBJECT | INTERFACE | UNION
+
+enum PAYMENT_STATUS {
+    PENDING
+    FAILED
+    SUCCESS
+    REFUNDED
+    CANCELLED
+}
+
+type Payment @key(fields: "userId") {
+    paymentId: ID!
+    amount: Float!
+    currency: String!
+    status: PAYMENT_STATUS!
+    transactionId: String
+    timeStamp: String!
+    qrString: String!
+
+    userId: ID!
+    user: User!
+
+    orderId: ID!
+    order: Order!
+}
+
+type PaymentList @key(fields: "userId") {
+    userId: ID!
+    payments: [Payment]
+}
+
+input PaymentValidationInput {
+    orderId: String!
+    code: String!
+}
+
+input CompletePaymentInput {
+    paymentId: ID!
+    orderId: ID!
+    code: String!
+}
+
+type ValidationResponse {
+    message: String
+    status: PAYMENT_STATUS
+}
+
+
+extend type Query {
+    getPaymentById(paymentId: ID!): Payment
+    getPaymentByUserId(userId: ID!) : [Payment!]!
+    getPaymentByStatus(status: PAYMENT_STATUS!): [Payment!]!
+    getPaymentByOrderId(orderId: ID!): Payment
+}
+
+extend type Mutation {
+    validatePayment(input: PaymentValidationInput): ValidationResponse
+    cancelPayment(paymentId: ID!) : Payment
+    refundPayment(paymentId: ID!): Payment
+}
+
+extend type Subscription {
+    paymentStatusUpdated(orderId: ID!): Payment 
+    paymentRefunded(paymentId: ID!): Payment 
+}
+
+extend type User @key(fields: "userId") {
+    userId: ID! @external
+}
+
+extend type Order @key(fields: "orderId") {
+    orderId: ID! @external
+}
+

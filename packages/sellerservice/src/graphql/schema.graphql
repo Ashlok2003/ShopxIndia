@@ -1,0 +1,91 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", 
+            import: [ "@external", "@inaccessible", "@key", "@provides", "@requires"])
+
+
+enum CacheControlScope {
+    PUBLIC
+    PRIVATE
+}
+
+directive @cacheControl(
+    maxAge: Int
+    scope: CacheControlScope
+    inheritMaxAge: Boolean
+) on FIELD_DEFINITION | OBJECT | INTERFACE | UNION
+
+type Seller @key(fields: "sellerId") @cacheControl(maxAge: 300, scope: PUBLIC) {
+    sellerId: ID!
+    name: String
+    email: String
+    description: String
+    orderIds: [String!]!
+    productIds: [String!]!
+    addresses: [SellerAddress!]!
+}
+
+type SellerAddress {
+    id: ID!
+    sellerId: ID!
+
+    street: String
+    city: String
+    state: String
+    country: String
+    postalCode: String
+}
+
+type PaginationSellerResponse {
+    sellers: [Seller]
+    total: Int
+}
+
+
+input CreateSellerInput {
+    name: String!
+    email: String!
+    description: String!
+    address: NewAddressInput!
+}
+
+input UpdateSellerInput {
+    sellerId: String!
+    name: String
+    email: String
+    description: String
+    address: UpdateSellerAddressInput
+}
+
+input NewAddressInput {
+    street: String!
+    city: String!
+    state: String!
+    country: String!
+    postalCode: String!
+}
+
+input UpdateSellerAddressInput {
+    id: String
+    street: String
+    city: String
+    state: String
+    country: String
+    postalCode: String
+}
+
+input PaginationInput {
+    skip: Int!
+    take: Int!
+}
+
+
+extend type Query {
+    getSellerById(sellerId: ID!): Seller
+    getAllSellers(input: PaginationInput): PaginationSellerResponse
+    getSellerAddresses(selledId: ID!): [SellerAddress]
+}
+
+extend type Mutation {
+    createSeller(input: CreateSellerInput): Seller
+    updateSeller(input: UpdateSellerInput): Seller
+    deleteSeller(id: ID!): Seller
+}

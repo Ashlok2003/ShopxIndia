@@ -1,0 +1,57 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum ORDER_STATUS {
+  PENDING
+  SUCCESS
+  FAILED
+  OUT_FOR_DELIVERY
+  DELIVERED
+}
+
+enum PAYMENT_STATUS {
+  SUCCESS
+  PENDING
+  FAILED
+  REFUNDED
+}
+
+model Order {
+  orderId   String   @id @default(uuid())
+  userId    String
+  paymentId String?  @unique(map: "uq_payment_id")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  totalAmount   Float
+  orderItems    OrderItem[]
+  orderStatus   ORDER_STATUS   @default(PENDING)
+  paymentStatus PAYMENT_STATUS @default(PENDING)
+
+  @@index([userId], map: "idx_user_id")
+  @@index([createdAt], map: "idx_created_at")
+}
+
+model OrderItem {
+  id           String  @id @default(uuid())
+  order        Order   @relation(fields: [orderOrderId], references: [orderId], onDelete: Cascade)
+  productId    String
+  sellerId     String
+  orderOrderId String
+  productPrice Float   @default(0.0)
+  quantity     Int     @default(1)
+
+  @@index([orderOrderId], map: "idx_order_order_id")
+}

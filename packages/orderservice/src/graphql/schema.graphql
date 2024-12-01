@@ -1,0 +1,131 @@
+extend schema @link(url: "https://specs.apollo.dev/federation/v2.3", 
+            import: [ "@external", "@inaccessible", "@key", "@provides", "@requires"])
+
+
+enum CacheControlScope {
+    PUBLIC
+    PRIVATE
+}
+
+directive @cacheControl(
+    maxAge: Int
+    scope: CacheControlScope
+    inheritMaxAge: Boolean
+) on FIELD_DEFINITION | OBJECT | INTERFACE | UNION
+
+enum ORDER_STATUS {
+    PENDING
+    SUCCESS
+    FAILED
+    OUT_FOR_DELIVERY
+    DELIVERED
+}
+
+enum ORDER_PAYMENT_STATUS {
+    SUCCESS
+    PENDING
+    FAILED
+    REFUNDED
+}
+
+type Order @key(fields: "orderId") @cacheControl(maxAge: 300, scope: PUBLIC) {
+    orderId: ID!
+    
+    orderItems: [OrderItem!]!
+    totalAmount: Float!
+    orderStatus: ORDER_STATUS!
+    paymentStatus: ORDER_PAYMENT_STATUS!
+
+    userId: ID!
+    user: User! 
+
+    paymentId: ID!
+    payment: Payment!
+
+    createdAt: String
+    updatedAt: String
+}
+
+type OrdersList @key(fields: "userId") {
+    userId: ID!
+    orders: [Order]
+}
+
+type OrderItem {
+    id: ID!
+    quantity: Int
+
+    productId: ID!
+    product: Product!
+}
+
+type OrderList {
+    total: Int!
+    orders: [Order!]!
+}
+
+union OrderData =  Order | OrderList
+
+type SuccessOrderResponse {
+    status: Int!
+    data: OrderData!
+}
+
+type ErrorOrderResponse {
+    errorCode: Int!
+    errorMessage: String!
+}
+
+
+union OrderResponse = SuccessOrderResponse | ErrorOrderResponse 
+
+input OrderPagination {
+    take: Int!
+    skip: Int!
+}
+
+input OrderItemInput {
+    productId: String
+    quantity: Int
+}
+
+input OrderInput {
+    userId: String
+    orderItems: [OrderItemInput]
+}
+
+input OrderUpdateItemInput {
+    orderItemId: String!
+    productId: String!
+    quantity: Int
+}
+
+input OrderUpdateInput {
+    orderId: ID!
+    status: ORDER_STATUS
+    orderItems: [OrderUpdateItemInput]
+}
+
+extend type Query {
+    getOrder(orderId: ID!): OrderResponse
+    getOrders(userId: ID!): OrderResponse
+    getAllOrders(pagination: OrderPagination): OrderResponse
+}
+
+extend type Mutation {
+    createOrder(input: OrderInput): OrderResponse
+    updateOrder(input: OrderUpdateInput): OrderResponse
+    cancelOrder(orderId: ID!): OrderResponse
+}
+
+extend type User @key(fields: "userId") {
+    userId: ID! @external
+}
+
+extend type Product @key(fields: "productId") {
+    productId: ID! @external
+}
+
+extend type Payment @key(fields: "userId") {
+    userId: ID! @external
+}
