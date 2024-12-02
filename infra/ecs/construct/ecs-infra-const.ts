@@ -70,13 +70,6 @@ export class ECSInfraConstruct extends Construct {
                 logDriver: new ecs.AwsLogDriver({
                     streamPrefix: `${baseName}Log`
                 }),
-                entryPoint: [
-                    "sh",
-                    "-c"
-                ],
-                command:[
-                    "npm run dev"
-                ],
             }
         });
 

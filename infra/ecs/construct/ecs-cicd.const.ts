@@ -25,6 +25,7 @@ export class ECSCICDConstruct extends Construct {
         super(scope, id);
 
         const sourceOutput = new codepipeline.Artifact();
+
         const sourceAction = new actions.CodeCommitSourceAction({
             actionName: 'CodeCommit_SourceMerge',
             repository: props.repo,
@@ -33,6 +34,7 @@ export class ECSCICDConstruct extends Construct {
         });
 
         const buildOutput = new codepipeline.Artifact();
+
         const buildAction = new actions.CodeBuildAction({
             actionName: 'CodeBuild_DockerBuild',
             project: this.createBuildProject(props.ecrRepo, props),
@@ -47,13 +49,12 @@ export class ECSCICDConstruct extends Construct {
         const deployAction = new actions.EcsDeployAction({
             actionName: 'ECS_ContainerDeploy',
             service: props.service,
-            imageFile: new codepipeline.ArtifactPath(buildOutput, (props.appPath ? `${props.appPath}/imagedefinitions.json` : 'imagedefinition.json'),),
+            imageFile: new codepipeline.ArtifactPath(buildOutput, 'imagedefinition.json'),
             deploymentTimeout: cdk.Duration.minutes(60)
         });
 
         new codepipeline.Pipeline(this, 'ECSServicePipeline', {
-            pipelineName: `${cdk.Stack.of(this)}-Pipeline`,
-            pipelineType: codepipeline.PipelineType.V2,
+            pipelineName: `${cdk.Stack.of(this).stackName}-Pipeline`,
             enableKeyRotation: props.enableKeyRotation ? props.enableKeyRotation : true,
             stages: [
                 {
@@ -78,21 +79,11 @@ export class ECSCICDConstruct extends Construct {
     }
 
     private createBuildProject(ecrRepo: ecr.IRepository, props: ECSCICDProps): codebuild.Project {
-        const buildCommandsBefore = [
-            'echo "In Build Phase"',
-            'cd $APP_PATH',
-            'ls -l',
-        ];
-
-        const buildCommandsAfter = [
-            `$(aws ecr get-login --no-inclue-email)`,
-            `docker build -f ${props.dockerfileName ? props.dockerfileName : 'Dockerfile'} - t $ECR_REPO_URI:$TAG .`,
-            'docker push $ECR_REPO_URI:$TAG'
-        ];
+        const dockerfileName = props.dockerfileName ?? 'Dockerfile';
 
         const appPath = props.appPath ? `${props.appPath}` : ".";
 
-        const project = new codebuild.Project(this, 'DockerBuild', {
+        const project = new codebuild.Project(this, 'DockerBuildProject', {
             environment: {
                 buildImage: codebuild.LinuxBuildImage.AMAZON_LINUX_2_4,
                 computeType: codebuild.ComputeType.SMALL,
@@ -114,31 +105,29 @@ export class ECSCICDConstruct extends Construct {
                 phases: {
                     pre_build: {
                         commands: [
-                            'echo In Pre-Build Phase',
+                            'echo Logging in to Amazon ECR...',
+                            'aws ecr get-login-password --region $AWS_DEFAULT_REGION | docker login --username AWS --password-stdin $ECR_REPO_URI',
                             'export TAG=latest',
-                            `echo $TAG`
                         ]
                     },
                     build: {
                         commands: [
-                            ...buildCommandsBefore,
-                            ...(props.buildCommands ? props.buildCommands : []),
-                            ...buildCommandsAfter
-                        ]
+                            `cd ${appPath}`,
+                            'ls -la',
+                            `docker build -f ${dockerfileName} -t $ECR_REPO_URI:$TAG .`,
+                            'docker push $ECR_REPO_URI:$TAG',
+                        ].concat(props.buildCommands ?? []),
                     },
                     post_build: {
                         commands: [
-                            'echo "In Post-Build Phase"',
-                            'pwd',
+                            'echo Creating imagedefinitions.json file...',
                             "printf '[{\"name\":\"%s\",\"imageUri\":\"%s\"}]' $CONTAINER_NAME $ECR_REPO_URI:$TAG > imagedefinitions.json",
-                            "pwd; ls -al; cat imagedefinitions.json"
+                            'cat imagedefinitions.json',
                         ]
                     }
                 },
                 artifacts: {
-                    files: [
-                        `${appPath}/imagedefinitions.json`
-                    ]
+                    files: ['imagedefinitions.json'],
                 }
             }),
         });
