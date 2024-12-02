@@ -38,7 +38,7 @@ export class VPCInfraStack extends cdk.Stack {
 
         return  new ec2.Vpc(this, baseName, {
             maxAzs: vpcMaxAzs,
-            cidr: vpcCidr,
+            ipAddresses: ec2.IpAddresses.cidr(vpcCidr),
             natGateways: natGateways,
             subnetConfiguration: [
                 {
@@ -64,10 +64,12 @@ export class VPCInfraStack extends cdk.Stack {
     }
 
     private createCloudMapNamespace(cluster: ecs.Cluster, namespaceName: string):sd.PrivateDnsNamespace{
-        return new sd.PrivateDnsNamespace(this, `${namespaceName}Namespace`, {
+        const cloudMapNamespace =  new sd.PrivateDnsNamespace(this, `${namespaceName}Namespace`, {
             name: namespaceName,
             vpc: cluster.vpc,
             description: `Private DNS namespace for ${namespaceName}`,
         });
+
+        return cloudMapNamespace;
     }
 }

@@ -26,15 +26,18 @@ export interface ECSServiceProps {
     DockerPath: string;
     InfraVersion: string;
     InternetFacing: boolean;
-    SharedResources: any;
+    SSMParameterPrefix: string;
 }
 
 export interface ECSAlbServiceStackProps extends cdk.StackProps {
     services: ECSServiceProps[];
     centralizedDashboard: boolean;
+    commonVpc: ec2.IVpc,
+    cluster: ecs.ICluster;
+    cloudMapNamespace: sd.IPrivateDnsNamespace;
 }
 
-export class EcsAlbServiceStack extends cdk.Stack {
+export class ECSAlbServiceStack extends cdk.Stack {
     public readonly commonVpc: ec2.IVpc;
     public readonly ecsCluster: ecs.ICluster;
     public readonly props: ECSAlbServiceStackProps;
@@ -45,9 +48,9 @@ export class EcsAlbServiceStack extends cdk.Stack {
         
         this.props = props;
 
-        this.commonVpc = this.getVpc();
-        this.ecsCluster = this.loadEcsCluster();
-        this.cloudMapNamespace = this.loadCloudMapNamespace();
+        this.ecsCluster = props.cluster;
+        this.commonVpc = props.commonVpc;
+        this.cloudMapNamespace = props.cloudMapNamespace;
 
         this.onEcsPostConstructor(this.commonVpc, this.ecsCluster, this.cloudMapNamespace);
     }
@@ -60,11 +63,11 @@ export class EcsAlbServiceStack extends cdk.Stack {
     private createServices(vpc: ec2.IVpc, cluster: ecs.ICluster, ns: sd.IPrivateDnsNamespace): ServiceConfig[] {
         return this.props.services.map((serviceConfig) => {
 
-            const repo = new ECSRepoConstruct(this, 'EcsAlbRepoConstruct', {
+            const repo = new ECSRepoConstruct(this, `EcsAlbRepoConstruct-${serviceConfig.ServiceName}`, {
                 shortStackName: serviceConfig.ShortStackName
             });
 
-            const infra = new ECSInfraConstruct(this, 'EcsAlbInfraConstruct', {
+            const infra = new ECSInfraConstruct(this, `EcsAlbInfraConstruct-${serviceConfig.ServiceName}`, {
                 shortStackName: serviceConfig.ShortStackName,
                 vpc: vpc,
                 cluster: cluster,
@@ -80,10 +83,11 @@ export class EcsAlbServiceStack extends cdk.Stack {
                 dockerPath: serviceConfig.DockerPath,
                 infraVersion: serviceConfig.InfraVersion,
                 internetFacing: serviceConfig.InternetFacing,
-                sharedResources: serviceConfig.SharedResources
+                cloudMapNamespace: this.cloudMapNamespace,
+                ssmParameterPrefix: serviceConfig.SSMParameterPrefix,
             });
 
-            new ECSCICDConstruct(this, 'EcsAlbCicdConstruct', {
+            new ECSCICDConstruct(this, `EcsAlbCicdConstruct-${serviceConfig.ServiceName}`, {
                 service: infra.service,
                 containerName: infra.containerName,
                 repo: repo.gitRepo,
@@ -106,28 +110,6 @@ export class EcsAlbServiceStack extends cdk.Stack {
             stackName: "ECSService",
             services,
             centralizedDashboard: this.props.centralizedDashboard,
-        });
-    }
-
-    private getVpc(): ec2.IVpc {
-        const vpcName = this.getParameter('VpcName');
-        return ec2.Vpc.fromLookup(this, 'Vpc', { vpcName });
-    }
-
-    private loadEcsCluster(): ecs.ICluster {
-        const ecsClusterName = this.getParameter('ECSClusterName');
-        return ecs.Cluster.fromClusterAttributes(this, 'ecs-cluster', {
-            vpc: this.commonVpc,
-            clusterName: ecsClusterName,
-        });
-    }
-
-    private loadCloudMapNamespace(): sd.IPrivateDnsNamespace {
-        const namespaceName = this.getParameter('CloudMapNamespaceName');
-        return sd.PrivateDnsNamespace.fromPrivateDnsNamespaceAttributes(this, 'cloud-map', {
-            namespaceName,
-            namespaceArn: this.getParameter('CloudMapNamespaceArn'),
-            namespaceId: this.getParameter('CloudMapNamespaceId'),
         });
     }
 

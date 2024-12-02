@@ -1,10 +1,12 @@
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cdk from 'aws-cdk-lib';
 import { Construct } from 'constructs';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 
 export interface S3Props {
     bucketName: string,
     allowCors?: boolean;
+    ssmParameterPrefix: string;
 }
 
 export class S3Bucket extends Construct {
@@ -31,6 +33,11 @@ export class S3Bucket extends Construct {
             versioned: true,
             removalPolicy: cdk.RemovalPolicy.DESTROY,
             autoDeleteObjects: false,
+        });
+
+        new ssm.StringParameter(this, "PostgresConnectionUrlParameter", {
+            parameterName: `${props.ssmParameterPrefix}/bucket-name`,
+            stringValue: this.bucket.bucketName,
         });
     }
 }

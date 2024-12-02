@@ -22,8 +22,13 @@
     "typescript": "~5.6.3"
   },
   "dependencies": {
+    "@apollo/gateway": "^2.9.3",
+    "@apollo/server": "^4.11.2",
+    "@as-integrations/aws-lambda": "^3.1.0",
+    "@aws-sdk/client-servicediscovery": "^3.699.0",
     "@cdklabs/cdk-amazonmq": "^0.1.2",
     "aws-cdk-lib": "2.171.0",
+    "aws-xray-sdk-core": "^3.10.2",
     "constructs": "^10.0.0",
     "dotenv": "^16.4.5",
     "env-var": "^7.5.0"

@@ -9,7 +9,7 @@ export const getClient = (): DynamoDBClient => {
     try {
         client = process.env.ENVIRONMENT === "PRODUCTION"
             ? new DynamoDBClient({ region: process.env.AWS_REGION })
-            : new DynamoDBClient({ endpoint: process.env.DATABASE_URL, region: "us-east-1" });
+            : new DynamoDBClient({ endpoint: process.env.DYNAMODB_URL, region: "us-east-1" });
 
         return client;
     }

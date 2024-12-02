@@ -11,8 +11,26 @@ import { AmazonRabbitMQ } from "./construct/rabbitmq-const";
 import { RDBS } from "./construct/rdbs-const";
 import { S3Bucket } from "./construct/s3-const";
 
+export interface IndexConfig {
+    indexName: string;
+    partitionKey: {
+        name: string;
+        type: dynamodb.AttributeType;
+    };
+    sortKey?: {
+        name: string;
+        type: dynamodb.AttributeType;
+    };
+    projectionType: dynamodb.ProjectionType;
+}
+
 export interface SharedResourcesStackProps extends cdk.StackProps {
     vpc: ec2.IVpc;
+    bucketName: string;
+    dynamoTableName: string;
+    rdsDatabaseName: string;
+    ssmParameterPrefix: string;
+    dynamoIndexes: IndexConfig[];
 }
 
 export class SharedResourcesStack extends cdk.Stack {
@@ -27,8 +45,9 @@ export class SharedResourcesStack extends cdk.Stack {
         super(scope, id, props);
 
         const bucket = new S3Bucket(this, 'MyS3Bucket', {
-            bucketName: 'shopxindia',
+            bucketName: props.bucketName,
             allowCors: true,
+            ssmParameterPrefix: props.ssmParameterPrefix,
         });
 
         this.s3Bucket = bucket.bucket;
@@ -39,14 +58,9 @@ export class SharedResourcesStack extends cdk.Stack {
         });
 
         const dynamoDB = new DynamoDB(this, 'MyDynamoDBTable', {
-            tableName: 'Store',
-            indexes: [{
-                indexName: 'MyIndex',
-                partitionKey: { name: 'PK', type: dynamodb.AttributeType.STRING },
-                sortKey: { name: 'SK', type: dynamodb.AttributeType.STRING },
-                projectionType: dynamodb.ProjectionType.ALL,
-            }],
-            ssmParameterPrefix: '/shared-resources/dynamodb',
+            tableName: props.dynamoTableName,
+            indexes: props.dynamoIndexes,
+            ssmParameterPrefix: props.ssmParameterPrefix
         });
 
         this.dynamoTable = dynamoDB.dynamoTable;
@@ -56,22 +70,22 @@ export class SharedResourcesStack extends cdk.Stack {
             subnetGroupName: 'RedisSubnetGroup',
             securityGroupName: 'RedisSecurityGroup',
             clusterName: 'MyRedisCluster',
-            ssmParameterPrefix: '/shared-resources/redis',
+            ssmParameterPrefix: props.ssmParameterPrefix,  
         });
 
         this.redisEndpoint = redisCache.redisEndpoint;
 
         const rdsInstance = new RDBS(this, 'MyPostgresDB', {
             vpc: props.vpc,
-            databaseName: 'mydatabase',
+            databaseName: props.rdsDatabaseName,
             instanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE2, ec2.InstanceSize.MICRO),
-            ssmParameterPrefix: '/shared-resources/rds',
+            ssmParameterPrefix: props.ssmParameterPrefix,  
         });
 
         this.rdsEndpoint = rdsInstance.dbEndpoint;
 
         const rabbitMqSecret = new secretsmanager.Secret(this, 'RabbitMQAdminSecret', {
-            secretName: '/shared-resources/rabbitmq/admin',
+            secretName: `${props.ssmParameterPrefix}/rabbitmq/admin`,
             generateSecretString: {
                 secretStringTemplate: JSON.stringify({ username: 'admin' }),
                 generateStringKey: 'password',
@@ -83,7 +97,7 @@ export class SharedResourcesStack extends cdk.Stack {
             vpc: props.vpc,
             adminSecret: rabbitMqSecret,
             instanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE2, ec2.InstanceSize.MICRO),
-            ssmParameterPrefix: '/shared-resources/rabbitmq',
+            ssmParameterPrefix: `${props.ssmParameterPrefix}/rabbitmq/admin`,
         });
 
         this.rabbitMqUrl = rabbitMq.brokerUrl;

@@ -5,6 +5,7 @@ import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
 import * as loadBalancer from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as sd from 'aws-cdk-lib/aws-servicediscovery';
 import { Construct } from 'constructs';
 
 export interface ECSInfraProps {
@@ -23,10 +24,8 @@ export interface ECSInfraProps {
     autoscaling: boolean;
     minTasks: number;
     maxTasks: number;
-    sharedResources: {
-        ssmParameterNames: { [key: string]: string };
-        bucketName: string;
-    };
+    cloudMapNamespace: sd.IPrivateDnsNamespace;
+    ssmParameterPrefix: string;
 }
 
 export class ECSInfraConstruct extends Construct {
@@ -55,7 +54,8 @@ export class ECSInfraConstruct extends Construct {
             memoryLimitMiB: props.memory,
 
             cloudMapOptions: {
-                name: props.shortStackName
+                name: props.shortStackName,
+                cloudMapNamespace: props.cloudMapNamespace
             },
             circuitBreaker: {
                 rollback: true
@@ -87,22 +87,24 @@ export class ECSInfraConstruct extends Construct {
 
     private getContainerEnvironment(props: ECSInfraProps): { [key: string]: string } {
         const environmentVariables = {
-            BUCKET_NAME: props.sharedResources.bucketName,
-            ...this.getSSMEnvironmentVariables(props.sharedResources.ssmParameterNames)
-        }
-
+            BUCKET_NAME: this.fetchSSMParameter(`${props.ssmParameterPrefix}/bucket-name`),
+            DYNAMODB_URL: this.fetchSSMParameter(`${props.ssmParameterPrefix}/dynamodb-url`),
+            REDIS_URL: this.fetchSSMParameter(`${props.ssmParameterPrefix}/redis-endpoint`),
+            RABBITMQ_URL: this.fetchSSMParameter(`${props.ssmParameterPrefix}/rabbitMqUrl`),
+            DATABASE_URL: this.fetchSSMParameter(`${props.ssmParameterPrefix}/dbConnectionUrl`),
+            CLOUDFRONT_DOMAIN: this.fetchSSMParameter(`${props.ssmParameterPrefix}/cloudfront-url`),
+        };
+    
         return environmentVariables;
     }
-
-    private getSSMEnvironmentVariables(ssmParameterNames: { [key: string]: string }): { [key: string]: string } {
-        const ssmVariables: { [key: string]: string } = {};
-
-        for (const [key, paramName] of Object.entries(ssmParameterNames)) {
-            //! Fetch each SSM parameter and store in environment variables :)
-            ssmVariables[key] = ssm.StringParameter.valueForStringParameter(this, paramName);
+    
+    private fetchSSMParameter(parameterName: string): string {
+        try {
+            return ssm.StringParameter.valueForStringParameter(this, parameterName);
+        } catch (error) {
+            console.error(`Failed to fetch SSM parameter for ${parameterName}`, error);
+            return ''; 
         }
-
-        return ssmVariables;
     }
 
     private getContainerImage(props: ECSInfraProps): ecs.ContainerImage {

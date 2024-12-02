@@ -53,6 +53,7 @@ export class ECSCICDConstruct extends Construct {
 
         new codepipeline.Pipeline(this, 'ECSServicePipeline', {
             pipelineName: `${cdk.Stack.of(this)}-Pipeline`,
+            pipelineType: codepipeline.PipelineType.V2,
             enableKeyRotation: props.enableKeyRotation ? props.enableKeyRotation : true,
             stages: [
                 {

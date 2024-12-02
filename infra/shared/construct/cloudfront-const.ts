@@ -1,7 +1,9 @@
 import { Construct } from 'constructs';
 import * as s3 from 'aws-cdk-lib/aws-s3';
 import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
+import * as origins from 'aws-cdk-lib/aws-cloudfront-origins'; // Required for S3Origin
 import * as cdk from 'aws-cdk-lib';
+import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
 
 export interface CloudFrontProps {
     bucket: s3.Bucket;
@@ -10,7 +12,7 @@ export interface CloudFrontProps {
 
 export class CloudFront extends Construct {
 
-    public readonly distribution: cloudfront.CloudFrontWebDistribution;
+    public readonly distribution: cloudfront.Distribution;
 
     constructor(scope: Construct, id: string, props: CloudFrontProps) {
         super(scope, id);
@@ -29,28 +31,22 @@ export class CloudFront extends Construct {
     }
 
     private grantBucketAccess(bucket: s3.IBucket, oai: cloudfront.OriginAccessIdentity): void {
-        bucket.grantRead(oai);
+        bucket.grantRead(oai.grantPrincipal);
     }
 
-    private createCloudFrontDistribution(props: CloudFrontProps, oai: cloudfront.OriginAccessIdentity): cloudfront.CloudFrontWebDistribution {
-        return new cloudfront.CloudFrontWebDistribution(this, 'CloudFrontDistribution', {
-            originConfigs: [
-                {
-                    s3OriginSource: {
-                        s3BucketSource: props.bucket,
-                        originAccessIdentity: oai,
-                    },
-                    behaviors: [
-                        {
-                            isDefaultBehavior: true,
-                            allowedMethods: cloudfront.CloudFrontAllowedMethods.GET_HEAD,
-                            cachedMethods: cloudfront.CloudFrontAllowedCachedMethods.GET_HEAD,
-                            defaultTtl: cdk.Duration.seconds(3600),
-                            maxTtl: cdk.Duration.days(1),
-                        },
-                    ],
-                },
-            ],
+    private createCloudFrontDistribution(props: CloudFrontProps, oai: cloudfront.OriginAccessIdentity): cloudfront.Distribution {
+
+        return new cloudfront.Distribution(this, 'CloudFrontDistribution', {
+            defaultBehavior: {
+                origin: new origins.OriginGroup({
+                    primaryOrigin: origins.S3BucketOrigin.withOriginAccessControl(props.bucket),
+                    fallbackOrigin: new origins.HttpOrigin('www.example.com'),
+                    fallbackStatusCodes: [404],
+                }),
+                allowedMethods: cloudfront.AllowedMethods.ALLOW_GET_HEAD,
+                cachePolicy: cloudfront.CachePolicy.CACHING_OPTIMIZED,
+                viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.REDIRECT_TO_HTTPS,
+            },
             comment: props.comment ?? 'CloudFront distribution for S3 bucket',
             priceClass: cloudfront.PriceClass.PRICE_CLASS_100,
         });
