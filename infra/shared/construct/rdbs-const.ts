@@ -6,7 +6,7 @@ import * as ssm from 'aws-cdk-lib/aws-ssm';
 import * as secretsmanager from 'aws-cdk-lib/aws-secretsmanager';
 import { Construct } from 'constructs';
 
-export interface RDBSProps  {
+export interface RDBSProps {
     vpc: ec2.IVpc;
     databaseName: string;
     instanceType?: ec2.InstanceType;
@@ -22,7 +22,7 @@ export class RDBS extends Construct {
     constructor(scope: Construct, id: string, props: RDBSProps) {
         super(scope, id);
 
-        const instanceType = props.instanceType || ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE2, ec2.InstanceSize.MICRO);
+        const instanceType = props.instanceType || ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO);
         const multiAz = props.multiAz ?? true;
         const publiclyAccessible = props.publiclyAccessible ?? false;
         const ssmParameterPrefix = props.ssmParameterPrefix || `/${cdk.Stack.of(this).stackName}-Postgres`;
@@ -52,7 +52,7 @@ export class RDBS extends Construct {
             }),
             vpc: props.vpc,
             securityGroups: [securityGroup],
-            instanceType: props.instanceType,
+            instanceType: instanceType,
             databaseName: props.databaseName,
             credentials: rds.Credentials.fromSecret(this.dbSecret),
             publiclyAccessible: publiclyAccessible,
@@ -63,9 +63,10 @@ export class RDBS extends Construct {
 
         this.dbEndpoint = postgresInstance.dbInstanceEndpointAddress;
 
-        const dbConnectionUrl = cdk.Fn.sub(
-            `postgres://${this.dbSecret.secretValueFromJson('username')}:${this.dbSecret.secretValueFromJson('password')}@${this.dbEndpoint}:5432/${props.databaseName}`
-        );
+        const username = this.dbSecret.secretValueFromJson('username').toString();
+        const password = this.dbSecret.secretValueFromJson('password').toString();
+
+        const dbConnectionUrl = `postgres://${username}:${password}@${this.dbEndpoint}:5432/${props.databaseName}`;
 
         new ssm.StringParameter(this, "PostgresConnectionUrlParameter", {
             parameterName: `${ssmParameterPrefix}/dbConnectionUrl`,

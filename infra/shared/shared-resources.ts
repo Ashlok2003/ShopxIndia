@@ -55,6 +55,7 @@ export class SharedResourcesStack extends cdk.Stack {
         this.cloudFront = new CloudFront(this, 'MyCloudFront', {
             bucket: this.s3Bucket,
             comment: 'CloudFront for S3 Bucket',
+            ssmParameterPrefix: props.ssmParameterPrefix,
         });
 
         const dynamoDB = new DynamoDB(this, 'MyDynamoDBTable', {
@@ -78,7 +79,7 @@ export class SharedResourcesStack extends cdk.Stack {
         const rdsInstance = new RDBS(this, 'MyPostgresDB', {
             vpc: props.vpc,
             databaseName: props.rdsDatabaseName,
-            instanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE2, ec2.InstanceSize.MICRO),
+            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
             ssmParameterPrefix: props.ssmParameterPrefix,  
         });
 
@@ -96,8 +97,8 @@ export class SharedResourcesStack extends cdk.Stack {
         const rabbitMq = new AmazonRabbitMQ(this, 'MyRabbitMQ', {
             vpc: props.vpc,
             adminSecret: rabbitMqSecret,
-            instanceType: ec2.InstanceType.of(ec2.InstanceClass.BURSTABLE2, ec2.InstanceSize.MICRO),
-            ssmParameterPrefix: `${props.ssmParameterPrefix}/rabbitmq/admin`,
+            instanceType: ec2.InstanceType.of(ec2.InstanceClass.T3, ec2.InstanceSize.MICRO),
+            ssmParameterPrefix: props.ssmParameterPrefix
         });
 
         this.rabbitMqUrl = rabbitMq.brokerUrl;

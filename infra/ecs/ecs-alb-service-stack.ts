@@ -64,11 +64,11 @@ export class ECSAlbServiceStack extends cdk.Stack {
         return this.props.services.map((serviceConfig) => {
 
             const repo = new ECSRepoConstruct(this, `EcsAlbRepoConstruct-${serviceConfig.ServiceName}`, {
-                shortStackName: serviceConfig.ShortStackName
+                shortStackName: serviceConfig.ServiceName
             });
 
             const infra = new ECSInfraConstruct(this, `EcsAlbInfraConstruct-${serviceConfig.ServiceName}`, {
-                shortStackName: serviceConfig.ShortStackName,
+                shortStackName: serviceConfig.ServiceName,
                 vpc: vpc,
                 cluster: cluster,
                 ecrRepo: repo.ecrRepo,

@@ -4,10 +4,12 @@ import * as cloudfront from 'aws-cdk-lib/aws-cloudfront';
 import * as origins from 'aws-cdk-lib/aws-cloudfront-origins'; // Required for S3Origin
 import * as cdk from 'aws-cdk-lib';
 import { S3BucketOrigin } from 'aws-cdk-lib/aws-cloudfront-origins';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 
 export interface CloudFrontProps {
     bucket: s3.Bucket;
     comment?: string;
+    ssmParameterPrefix: string;
 }
 
 export class CloudFront extends Construct {
@@ -22,6 +24,11 @@ export class CloudFront extends Construct {
         this.grantBucketAccess(props.bucket, originAccessIdentity);
 
         this.distribution = this.createCloudFrontDistribution(props, originAccessIdentity);
+
+        new ssm.StringParameter(this, "CloudDistributionUrl", {
+            parameterName: `${props.ssmParameterPrefix}/cloudfront-url`,
+            stringValue: this.distribution.distributionDomainName,
+        });
     }
 
     private createOriginAccessIdentity(): cloudfront.OriginAccessIdentity {

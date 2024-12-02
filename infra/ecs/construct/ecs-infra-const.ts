@@ -64,11 +64,19 @@ export class ECSInfraConstruct extends Construct {
                 image: this.getContainerImage(props),
                 containerName: this.containerName,
                 containerPort: props.containerPort,
+                
                 environment: this.getContainerEnvironment(props),
                 enableLogging: true,
                 logDriver: new ecs.AwsLogDriver({
                     streamPrefix: `${baseName}Log`
                 }),
+                entryPoint: [
+                    "sh",
+                    "-c"
+                ],
+                command:[
+                    "npm run dev"
+                ],
             }
         });
 
@@ -93,17 +101,18 @@ export class ECSInfraConstruct extends Construct {
             RABBITMQ_URL: this.fetchSSMParameter(`${props.ssmParameterPrefix}/rabbitMqUrl`),
             DATABASE_URL: this.fetchSSMParameter(`${props.ssmParameterPrefix}/dbConnectionUrl`),
             CLOUDFRONT_DOMAIN: this.fetchSSMParameter(`${props.ssmParameterPrefix}/cloudfront-url`),
+            ENVIRONMENT: "PRODUCTION",
         };
-    
+
         return environmentVariables;
     }
-    
+
     private fetchSSMParameter(parameterName: string): string {
         try {
             return ssm.StringParameter.valueForStringParameter(this, parameterName);
         } catch (error) {
             console.error(`Failed to fetch SSM parameter for ${parameterName}`, error);
-            return ''; 
+            return '';
         }
     }
 

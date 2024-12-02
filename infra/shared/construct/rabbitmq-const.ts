@@ -35,6 +35,14 @@ export class AmazonRabbitMQ extends Construct {
             }),
         });
 
+        const selectedSubnet = props.vpc.selectSubnets({
+            subnetType: SubnetType.PRIVATE_WITH_EGRESS,
+        }).subnets[0];
+
+        if (!selectedSubnet) {
+            throw new Error("No subnets of the required type found in the VPC.");
+        }
+
         this.broker = new amazonmq.RabbitMqBrokerInstance(this, "RabbitMQBroker", {
             publiclyAccessible: props.publiclyAccessible ?? false,
             version: engineVersion,
@@ -45,8 +53,9 @@ export class AmazonRabbitMQ extends Construct {
             },
             configuration,
             vpc: props.vpc,
+
             vpcSubnets: {
-                subnetType: SubnetType.PRIVATE_WITH_EGRESS,
+                subnets: [selectedSubnet],
             },
         });
 
@@ -54,10 +63,10 @@ export class AmazonRabbitMQ extends Construct {
         const password = props.adminSecret.secretValueFromJson("password").unsafeUnwrap();
         const endpoint = this.broker.endpoints.amqp.url;
         this.brokerUrl = `amqp://${username}:${password}@${endpoint}:5672`;
-        
+
 
         const ssmParameterPrefix = props.ssmParameterPrefix || `/${cdk.Stack.of(this).stackName}`;
-        
+
         new ssm.StringParameter(this, "RabbitMqUrlParameter", {
             parameterName: `${ssmParameterPrefix}/rabbitMqUrl`,
             stringValue: this.brokerUrl,

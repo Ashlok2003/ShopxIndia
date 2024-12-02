@@ -38,9 +38,8 @@ export class DynamoDB extends Construct {
             for (const index of props.indexes) {
                 this.dynamoTable.addGlobalSecondaryIndex({
                     indexName: index.indexName,
-                    partitionKey: index.partitionKey,
-                    sortKey: index.sortKey,
-                    projectionType: index.projectionType || dynamodb.ProjectionType.ALL,
+                    partitionKey: { name: index.partitionKey.name, type: dynamodb.AttributeType.STRING },
+                    projectionType: dynamodb.ProjectionType.ALL,
                 });
             }
         }
