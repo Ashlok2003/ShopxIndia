@@ -23,14 +23,19 @@ export class ECSCICDConstruct extends Construct {
 
     constructor(scope: Construct, id: string, props: ECSCICDProps) {
         super(scope, id);
+        
+        const githubOauthToken = cdk.SecretValue.secretsManager('github-token');
+        const githubRepo = "Ashlok2003/ShopxIndia";
 
         const sourceOutput = new codepipeline.Artifact();
 
-        const sourceAction = new actions.CodeCommitSourceAction({
-            actionName: 'CodeCommit_SourceMerge',
-            repository: props.repo,
+        const sourceAction = new actions.GitHubSourceAction({
+            actionName: "GitHub_Source",
+            owner: githubRepo.split('/')[0],
+            repo: githubRepo.split('/')[1],
+            oauthToken: githubOauthToken,
             output: sourceOutput,
-            branch: 'master'
+            branch: 'main',
         });
 
         const buildOutput = new codepipeline.Artifact();

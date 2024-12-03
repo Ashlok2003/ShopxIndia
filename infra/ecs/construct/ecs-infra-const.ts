@@ -113,7 +113,7 @@ export class ECSInfraConstruct extends Construct {
         if (props.dockerImageType == 'HUB') {
             return ecs.ContainerImage.fromRegistry("amazon/amazon-ecs-sample");
         } else if (props.dockerImageType == 'ECR') {
-            return ecs.ContainerImage.fromEcrRepository(props.ecrRepo);
+            return ecs.ContainerImage.fromEcrRepository(props.ecrRepo, 'latest');
         } else {
             return ecs.ContainerImage.fromAsset(props.dockerPath);
         }
