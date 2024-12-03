@@ -17,26 +17,42 @@ export interface ECSCICDProps {
     dockerfileName?: string;
     buildCommands?: string[];
     enableKeyRotation?: boolean;
+    githubOauthTokenArn?: string;
+    githubRepo?: string;
+    githubBranch?: string;
+    pipelineName?: string;
 }
 
 export class ECSCICDConstruct extends Construct {
 
     constructor(scope: Construct, id: string, props: ECSCICDProps) {
         super(scope, id);
-        
-        const githubOauthToken = cdk.SecretValue.secretsManager('github-token');
-        const githubRepo = "Ashlok2003/ShopxIndia";
+
+        if (!props.service || !props.ecrRepo || !props.repo) {
+            throw new Error("Service, ECR Repository, and CodeCommit Repository are required.");
+        }
+
+        const githubOauthToken = props.githubOauthTokenArn
+            ? cdk.SecretValue.secretsManager(props.githubOauthTokenArn)
+            : undefined;
 
         const sourceOutput = new codepipeline.Artifact();
 
-        const sourceAction = new actions.GitHubSourceAction({
-            actionName: "GitHub_Source",
-            owner: githubRepo.split('/')[0],
-            repo: githubRepo.split('/')[1],
-            oauthToken: githubOauthToken,
-            output: sourceOutput,
-            branch: 'main',
-        });
+        const sourceAction = githubOauthToken
+            ? new actions.GitHubSourceAction({
+                actionName: "GitHub_Source",
+                owner: props.githubRepo?.split('/')[0] ?? "owner",
+                repo: props.githubRepo?.split('/')[1] ?? "repo",
+                oauthToken: githubOauthToken,
+                output: sourceOutput,
+                branch: props.githubBranch ?? "main",
+            })
+            : new actions.CodeCommitSourceAction({
+                actionName: "CodeCommit_Source",
+                repository: props.repo,
+                output: sourceOutput,
+                branch: props.githubBranch ?? "main",
+            });
 
         const buildOutput = new codepipeline.Artifact();
 
@@ -59,8 +75,8 @@ export class ECSCICDConstruct extends Construct {
         });
 
         new codepipeline.Pipeline(this, 'ECSServicePipeline', {
-            pipelineName: `${cdk.Stack.of(this).stackName}-Pipeline`,
-            enableKeyRotation: props.enableKeyRotation ? props.enableKeyRotation : true,
+            pipelineName: props.pipelineName ?? `${cdk.Stack.of(this).stackName}-Pipeline`,
+            enableKeyRotation: props.enableKeyRotation ?? true,
             stages: [
                 {
                     stageName: 'Source',
@@ -86,7 +102,7 @@ export class ECSCICDConstruct extends Construct {
     private createBuildProject(ecrRepo: ecr.IRepository, props: ECSCICDProps): codebuild.Project {
         const dockerfileName = props.dockerfileName ?? 'Dockerfile';
 
-        const appPath = props.appPath ? `${props.appPath}` : ".";
+        const appPath = props.appPath || '.';
 
         const project = new codebuild.Project(this, 'DockerBuildProject', {
             environment: {

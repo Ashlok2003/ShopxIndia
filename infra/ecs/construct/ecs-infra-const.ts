@@ -2,48 +2,52 @@ import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as ecsPatterns from 'aws-cdk-lib/aws-ecs-patterns';
-import * as loadBalancer from 'aws-cdk-lib/aws-elasticloadbalancingv2';
+import * as lb2 from 'aws-cdk-lib/aws-elasticloadbalancingv2';
 import * as iam from 'aws-cdk-lib/aws-iam';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
+import * as logs from 'aws-cdk-lib/aws-logs';
 import * as sd from 'aws-cdk-lib/aws-servicediscovery';
+import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
 
 export interface ECSInfraProps {
     shortStackName: string;
-    infraVersion: string;
     vpc: ec2.IVpc;
     cluster: ecs.ICluster;
-    dockerImageType: string;
-    ecrRepo: ecr.Repository;
     containerPort: number;
-    internetFacing: boolean;
-    dockerPath: string;
+    cpu: number;
     memory: number;
-    cpu: number
     desiredTasks: number;
     autoscaling: boolean;
     minTasks: number;
     maxTasks: number;
-    cloudMapNamespace: sd.IPrivateDnsNamespace;
+    dockerImageType: string;
+    ecrRepo: ecr.Repository;
+    internetFacing: boolean;
+    cloudNamespace: sd.PrivateDnsNamespace;
     ssmParameterPrefix: string;
 }
 
 export class ECSInfraConstruct extends Construct {
-    containerName: string;
-    service: ecs.FargateService;
-    alb: loadBalancer.ApplicationLoadBalancer;
+    public readonly service: ecs.FargateService;
+    public readonly alb: lb2.ApplicationLoadBalancer;
 
     constructor(scope: Construct, id: string, props: ECSInfraProps) {
         super(scope, id);
 
-        const alb = new loadBalancer.ApplicationLoadBalancer(this, 'alb', {
-            loadBalancerName: `${props.shortStackName}-alb`,
-            vpc: props.vpc,
-            internetFacing: props.internetFacing
+        if (!props.vpc || !props.cluster || !props.ecrRepo) {
+            throw new Error("VPC, ECS Cluster, and ECR Repository are required.");
+        }
+
+        const logDriver = new ecs.AwsLogDriver({
+            streamPrefix: `${props.shortStackName}-logs`,
+            logRetention: logs.RetentionDays.ONE_WEEK,
         });
 
-        const baseName = props.shortStackName;
-        this.containerName = `${baseName}Container`;
+        const alb = new lb2.ApplicationLoadBalancer(this, 'ALB', {
+            vpc: props.vpc,
+            internetFacing: props.internetFacing,
+            loadBalancerName: `${props.shortStackName}-alb`,
+        });
 
         const albFargateService = new ecsPatterns.ApplicationLoadBalancedFargateService(this, `Service`, {
             loadBalancer: alb,
@@ -55,22 +59,22 @@ export class ECSInfraConstruct extends Construct {
 
             cloudMapOptions: {
                 name: props.shortStackName,
-                cloudMapNamespace: props.cloudMapNamespace
+                cloudMapNamespace: props.cloudNamespace
             },
+
             circuitBreaker: {
                 rollback: true
             },
+
             taskImageOptions: {
-                image: this.getContainerImage(props),
-                containerName: this.containerName,
+                image: ecs.ContainerImage.fromRegistry("amazon/amazon-ecs-sample"),
                 containerPort: props.containerPort,
-                
                 environment: this.getContainerEnvironment(props),
                 enableLogging: true,
-                logDriver: new ecs.AwsLogDriver({
-                    streamPrefix: `${baseName}Log`
-                }),
-            }
+                logDriver
+            },
+
+            publicLoadBalancer: false
         });
 
         this.alb = albFargateService.loadBalancer;
@@ -106,16 +110,6 @@ export class ECSInfraConstruct extends Construct {
         } catch (error) {
             console.error(`Failed to fetch SSM parameter for ${parameterName}`, error);
             return '';
-        }
-    }
-
-    private getContainerImage(props: ECSInfraProps): ecs.ContainerImage {
-        if (props.dockerImageType == 'HUB') {
-            return ecs.ContainerImage.fromRegistry("amazon/amazon-ecs-sample");
-        } else if (props.dockerImageType == 'ECR') {
-            return ecs.ContainerImage.fromEcrRepository(props.ecrRepo, 'latest');
-        } else {
-            return ecs.ContainerImage.fromAsset(props.dockerPath);
         }
     }
 

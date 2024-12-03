@@ -17,6 +17,7 @@ export interface RedisElastiCacheProps {
 
 export class RedisElastiCache extends Construct {
     public readonly redisEndpoint: string;
+    public readonly redisPort: string;
 
     constructor(scope: Construct, id: string, props: RedisElastiCacheProps) {
         super(scope, id);
@@ -28,10 +29,17 @@ export class RedisElastiCache extends Construct {
         const cluster = this.createCacheCluster(clusterName, cacheNodeType, numCacheNodes, subnetGroup, securityGroup);
         this.redisEndpoint = cluster.attrRedisEndpointAddress;
 
+        this.redisPort = cluster.attrRedisEndpointPort;
+
+        new cdk.CfnOutput(this, "RedisUrlOutput", {
+            exportName: `${cdk.Stack.of(this).stackName}-RedisUrl`,
+            value: `redis://${this.redisEndpoint}:${this.redisPort}`,
+        });
+
         if (props.ssmParameterPrefix) {
             new cdk.aws_ssm.StringParameter(this, `${clusterName}-SSMParam`, {
                 parameterName: `${props.ssmParameterPrefix}/redis-endpoint`,
-                stringValue: this.redisEndpoint,
+                stringValue: `redis://${this.redisEndpoint}:${this.redisPort}`,
             });
         }
     }

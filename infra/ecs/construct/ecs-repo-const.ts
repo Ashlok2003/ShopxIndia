@@ -27,10 +27,16 @@ export class ECSRepoConstruct extends Construct {
             exportName: `${props.shortStackName}-CodeCommitName`,
         });
 
-        this.ecrRepo = new ecr.Repository(this, `${props.shortStackName}EcrRepository`, {
-            repositoryName: `${props.shortStackName}-${repoSuffix}`.toLowerCase()
-        });
-        
+        try {
+            this.ecrRepo = ecr.Repository.fromRepositoryName(this, `${props.shortStackName}ExistingEcrRepository`, `${props.shortStackName}-${repoSuffix}`.toLowerCase()) as ecr.Repository;
+        } catch (error) {
+            
+            this.ecrRepo = new ecr.Repository(this, `${props.shortStackName}EcrRepository`, {
+                repositoryName: `${props.shortStackName}-${repoSuffix}`.toLowerCase(),
+                lifecycleRules: [{ maxImageAge: cdk.Duration.days(30) }],
+            });
+        }
+
         new cdk.CfnOutput(this, `${props.shortStackName}ECRName`, {
             value: this.ecrRepo.repositoryName,
             description: 'The name of the ECR repository',

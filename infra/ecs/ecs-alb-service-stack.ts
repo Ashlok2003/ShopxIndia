@@ -34,34 +34,26 @@ export interface ECSAlbServiceStackProps extends cdk.StackProps {
     centralizedDashboard: boolean;
     commonVpc: ec2.IVpc,
     cluster: ecs.ICluster;
-    cloudMapNamespace: sd.IPrivateDnsNamespace;
+    cloudMapNamespace: sd.PrivateDnsNamespace;
 }
 
 export class ECSAlbServiceStack extends cdk.Stack {
-    public readonly commonVpc: ec2.IVpc;
-    public readonly ecsCluster: ecs.ICluster;
-    public readonly props: ECSAlbServiceStackProps;
-    public readonly cloudMapNamespace: sd.IPrivateDnsNamespace;
 
     constructor(scope: Construct, id: string, props: ECSAlbServiceStackProps) {
         super(scope, id, props);
-        
-        this.props = props;
 
-        this.ecsCluster = props.cluster;
-        this.commonVpc = props.commonVpc;
-        this.cloudMapNamespace = props.cloudMapNamespace;
+        const serviceConfigs = this.createServices(
+            props.commonVpc,
+            props.cluster,
+            props.cloudMapNamespace,
+            props.services
+        );
 
-        this.onEcsPostConstructor(this.commonVpc, this.ecsCluster, this.cloudMapNamespace);
+        this.createServiceMonitoring(serviceConfigs, props.centralizedDashboard);
     }
 
-    private onEcsPostConstructor(vpc: ec2.IVpc, cluster: ecs.ICluster, ns: sd.IPrivateDnsNamespace): void {
-        const services = this.createServices(vpc, cluster, ns);
-        this.createServiceMonitoring(services);
-    }
-
-    private createServices(vpc: ec2.IVpc, cluster: ecs.ICluster, ns: sd.IPrivateDnsNamespace): ServiceConfig[] {
-        return this.props.services.map((serviceConfig) => {
+    private createServices(vpc: ec2.IVpc, cluster: ecs.ICluster, cloudMapNamespace: sd.PrivateDnsNamespace, services: ECSServiceProps[]): ServiceConfig[] {
+        return services.map((serviceConfig) => {
 
             const repo = new ECSRepoConstruct(this, `EcsAlbRepoConstruct-${serviceConfig.ServiceName}`, {
                 shortStackName: serviceConfig.ServiceName
@@ -69,8 +61,8 @@ export class ECSAlbServiceStack extends cdk.Stack {
 
             const infra = new ECSInfraConstruct(this, `EcsAlbInfraConstruct-${serviceConfig.ServiceName}`, {
                 shortStackName: serviceConfig.ServiceName,
-                vpc: vpc,
-                cluster: cluster,
+                vpc,
+                cluster,
                 ecrRepo: repo.ecrRepo,
                 containerPort: serviceConfig.PortNumber,
                 cpu: serviceConfig.Cpu,
@@ -80,19 +72,21 @@ export class ECSAlbServiceStack extends cdk.Stack {
                 minTasks: serviceConfig.AutoScalingMinCapacity,
                 maxTasks: serviceConfig.AutoScalingMaxCapacity,
                 dockerImageType: serviceConfig.DockerImageType,
-                dockerPath: serviceConfig.DockerPath,
-                infraVersion: serviceConfig.InfraVersion,
                 internetFacing: serviceConfig.InternetFacing,
-                cloudMapNamespace: this.cloudMapNamespace,
+                cloudNamespace: cloudMapNamespace,
                 ssmParameterPrefix: serviceConfig.SSMParameterPrefix,
             });
 
             new ECSCICDConstruct(this, `EcsAlbCicdConstruct-${serviceConfig.ServiceName}`, {
                 service: infra.service,
-                containerName: infra.containerName,
+                containerName: serviceConfig.ServiceName,
                 repo: repo.gitRepo,
                 ecrRepo: repo.ecrRepo,
-                appPath: serviceConfig.DockerPath
+                appPath: serviceConfig.DockerPath,
+                githubBranch: 'main',
+                githubRepo: "Ashlok2003/ShopxIndia",
+                githubOauthTokenArn: "github-token",
+                pipelineName: serviceConfig.ServiceName
             });
 
             return {
@@ -105,19 +99,12 @@ export class ECSAlbServiceStack extends cdk.Stack {
         });
     }
 
-    private createServiceMonitoring(services: ServiceConfig[]): void {
+    private createServiceMonitoring(services: ServiceConfig[], centralizedDashboard: boolean): void {
         new ECSAlbMultiServiceMonitorConstruct(this, 'MultiServiceMonitor', {
             stackName: "ECSService",
             services,
-            centralizedDashboard: this.props.centralizedDashboard,
+            centralizedDashboard: centralizedDashboard,
         });
-    }
-
-    private getParameter(name: string): string {
-        const parameter = ssm.StringParameter.fromStringParameterAttributes(this, name, {
-            parameterName: name,
-        });
-        return parameter.stringValue;
     }
 }
 

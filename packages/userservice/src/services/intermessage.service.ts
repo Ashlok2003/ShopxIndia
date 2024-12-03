@@ -16,7 +16,6 @@ export class InterMessageService {
         this.URL = process.env.RABBITMQ_URL || "amqp://localhost";
         this.connect();
         this.userService = new UserService();
-
     }
 
     async connect(): Promise<void> {

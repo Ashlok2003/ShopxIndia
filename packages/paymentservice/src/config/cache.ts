@@ -11,7 +11,7 @@ class RedisCache {
     public static async getInstance(): Promise<RedisInstance> {
         if (!RedisCache.instance) {
             try {
-                RedisCache.instance = new Redis(process.env.REDIS_URL!);
+                RedisCache.instance = new Redis(`${process.env.REDIS_URL!}`);
 
                 RedisCache.instance.on("error", (err: Error) => {
                     this.logger.error("Redis Client Error:", err);

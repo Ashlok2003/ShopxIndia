@@ -22,6 +22,11 @@ const typeDefs = gql`${fs.readFileSync(path.join(__dirname, 'graphql', 'schema.g
 
 const PORT = process.env.PORT ?? 4002;
 
+
+console.log("RABBITMQ: ", process.env.RABBITMQ_URL);
+console.log("REDIS: ", process.env.REDIS_URL);
+
+
 const app: Express = express();
 const httpServer = http.createServer(app);
 
@@ -93,5 +98,5 @@ const server = new ApolloServer<Context>({
         console.log(`🚀 Server running at http://localhost:${PORT}`);
         console.log(`🚀 Subscriptions ready at ws://localhost:${PORT}/graphql`);
     });
-    
+
 })();

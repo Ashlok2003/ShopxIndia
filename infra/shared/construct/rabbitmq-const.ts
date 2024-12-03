@@ -62,8 +62,10 @@ export class AmazonRabbitMQ extends Construct {
         const username = props.adminSecret.secretValueFromJson("username").unsafeUnwrap();
         const password = props.adminSecret.secretValueFromJson("password").unsafeUnwrap();
         const endpoint = this.broker.endpoints.amqp.url;
-        this.brokerUrl = `amqp://${username}:${password}@${endpoint}:5672`;
 
+        const hostAndPort = endpoint.substring(8);
+
+        this.brokerUrl = `amqps://${username}:${password}@${hostAndPort}`;
 
         const ssmParameterPrefix = props.ssmParameterPrefix || `/${cdk.Stack.of(this).stackName}`;
 
