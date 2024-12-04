@@ -1,3 +1,4 @@
+import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
@@ -8,7 +9,6 @@ import * as logs from 'aws-cdk-lib/aws-logs';
 import * as sd from 'aws-cdk-lib/aws-servicediscovery';
 import * as ssm from 'aws-cdk-lib/aws-ssm';
 import { Construct } from 'constructs';
-
 export interface ECSInfraProps {
     shortStackName: string;
     vpc: ec2.IVpc;
@@ -55,7 +55,16 @@ export class ECSInfraConstruct extends Construct {
 
             circuitBreaker: { rollback: true },
             taskImageOptions: this.createTaskImageOptions(props, logDriver),
-            publicLoadBalancer: false
+            publicLoadBalancer: false,
+        });
+
+        const targetGroup = albFargateService.targetGroup;
+        targetGroup.configureHealthCheck({
+            path: '/health', 
+            interval: cdk.Duration.seconds(30), 
+            timeout: cdk.Duration.seconds(5), 
+            healthyThresholdCount: 2,
+            unhealthyThresholdCount: 5,
         });
 
         this.alb = albFargateService.loadBalancer;

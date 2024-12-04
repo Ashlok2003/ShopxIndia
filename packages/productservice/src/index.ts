@@ -33,6 +33,10 @@ interface Context {
     user?: any
 }
 
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
+
 app.use(graphqlUploadExpress({ maxFileSize: 10000000, maxFiles: 10 }));
 
 const schemaWithMiddleware = applyMiddleware(schema, permission);

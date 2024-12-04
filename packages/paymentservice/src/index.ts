@@ -35,10 +35,13 @@ const schema = buildSubgraphSchema({
     resolvers,
 });
 
-
 interface Context {
     user?: any
 }
+
+app.get('/health', (req, res) => {
+    res.status(200).send('OK');
+});
 
 const schemaWithMiddleware = applyMiddleware(schema, permission);
 
