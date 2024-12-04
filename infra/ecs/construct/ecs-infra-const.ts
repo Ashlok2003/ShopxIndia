@@ -18,8 +18,6 @@ export interface ECSInfraProps {
     memory: number;
     desiredTasks: number;
     autoscaling: boolean;
-    minTasks: number;
-    maxTasks: number;
     dockerImageType: string;
     ecrRepo: ecr.Repository;
     internetFacing: boolean;
@@ -38,16 +36,9 @@ export class ECSInfraConstruct extends Construct {
             throw new Error("VPC, ECS Cluster, and ECR Repository are required.");
         }
 
-        const logDriver = new ecs.AwsLogDriver({
-            streamPrefix: `${props.shortStackName}-logs`,
-            logRetention: logs.RetentionDays.ONE_WEEK,
-        });
+        const logDriver = this.createLogDriver(props.shortStackName);
 
-        const alb = new lb2.ApplicationLoadBalancer(this, 'ALB', {
-            vpc: props.vpc,
-            internetFacing: props.internetFacing,
-            loadBalancerName: `${props.shortStackName}-alb`,
-        });
+        const alb = this.createApplicationLoadBalancer(props);
 
         const albFargateService = new ecsPatterns.ApplicationLoadBalancedFargateService(this, `Service`, {
             loadBalancer: alb,
@@ -62,32 +53,46 @@ export class ECSInfraConstruct extends Construct {
                 cloudMapNamespace: props.cloudNamespace
             },
 
-            circuitBreaker: {
-                rollback: true
-            },
-
-            taskImageOptions: {
-                image: ecs.ContainerImage.fromRegistry("amazon/amazon-ecs-sample"),
-                containerPort: props.containerPort,
-                environment: this.getContainerEnvironment(props),
-                enableLogging: true,
-                logDriver
-            },
-
+            circuitBreaker: { rollback: true },
+            taskImageOptions: this.createTaskImageOptions(props, logDriver),
             publicLoadBalancer: false
         });
 
         this.alb = albFargateService.loadBalancer;
         this.service = albFargateService.service;
 
-        this.putParameter(`${props.shortStackName}AlbDnsName`, albFargateService.loadBalancer.loadBalancerDnsName);
-        this.putParameter(`${props.shortStackName}ServiceSecurityGroupId`, this.service.connections.securityGroups[0].securityGroupId);
+        this.storeParameters(props.shortStackName, albFargateService);
 
         albFargateService.targetGroup.setAttribute('deregistration_delay.timeout_seconds', '30');
 
         if (albFargateService.taskDefinition.executionRole) {
             this.appendEcrReadPolicy('ecs-ecr-get-image', albFargateService.taskDefinition.executionRole);
         }
+    }
+
+    private createApplicationLoadBalancer(props: ECSInfraProps): lb2.ApplicationLoadBalancer {
+        return new lb2.ApplicationLoadBalancer(this, 'ALB', {
+            vpc: props.vpc,
+            internetFacing: props.internetFacing,
+            loadBalancerName: `${props.shortStackName}-alb`,
+        });
+    }
+
+    private createLogDriver(shortStackName: string): ecs.AwsLogDriver {
+        return new ecs.AwsLogDriver({
+            streamPrefix: `${shortStackName}-logs`,
+            logRetention: logs.RetentionDays.ONE_WEEK,
+        });
+    }
+
+    private createTaskImageOptions(props: ECSInfraProps, logDriver: ecs.AwsLogDriver): ecsPatterns.ApplicationLoadBalancedTaskImageOptions {
+        return {
+            image: ecs.ContainerImage.fromEcrRepository(props.ecrRepo, 'latest'),
+            containerPort: props.containerPort,
+            environment: this.getContainerEnvironment(props),
+            enableLogging: true,
+            logDriver: logDriver,
+        };
     }
 
     private getContainerEnvironment(props: ECSInfraProps): { [key: string]: string } {
@@ -129,6 +134,11 @@ export class ECSInfraConstruct extends Construct {
         policy.addStatements(statement);
 
         role.attachInlinePolicy(policy);
+    }
+
+    private storeParameters(shortStackName: string, albFargateService: ecsPatterns.ApplicationLoadBalancedFargateService): void {
+        this.putParameter(`${shortStackName}AlbDnsName`, albFargateService.loadBalancer.loadBalancerDnsName);
+        this.putParameter(`${shortStackName}ServiceSecurityGroupId`, this.service.connections.securityGroups[0].securityGroupId);
     }
 
     private putParameter(name: string, value: string) {

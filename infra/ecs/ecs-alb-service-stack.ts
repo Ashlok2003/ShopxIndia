@@ -2,7 +2,6 @@ import * as cdk from 'aws-cdk-lib';
 import * as ec2 from 'aws-cdk-lib/aws-ec2';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
 import * as sd from 'aws-cdk-lib/aws-servicediscovery';
-import * as ssm from 'aws-cdk-lib/aws-ssm';
 
 import { Construct } from 'constructs';
 import { ECSCICDConstruct } from './construct/ecs-cicd.const';
@@ -69,8 +68,6 @@ export class ECSAlbServiceStack extends cdk.Stack {
                 memory: serviceConfig.Memory,
                 desiredTasks: serviceConfig.DesiredTasks,
                 autoscaling: serviceConfig.AutoScalingEnable,
-                minTasks: serviceConfig.AutoScalingMinCapacity,
-                maxTasks: serviceConfig.AutoScalingMaxCapacity,
                 dockerImageType: serviceConfig.DockerImageType,
                 internetFacing: serviceConfig.InternetFacing,
                 cloudNamespace: cloudMapNamespace,

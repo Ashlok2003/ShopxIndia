@@ -69,6 +69,9 @@ export class ECSAlbMultiServiceMonitorConstruct extends Construct {
             this.createWidget(`${serviceConfig.serviceName}-ALB-Response`, [
                 serviceConfig.alb.metrics.targetResponseTime(metricOptions),
             ]),
+        );
+
+        dashboard.addWidgets(
             this.createWidget(`${serviceConfig.serviceName}-ECS-CPU`, [
                 serviceConfig.ecsService.metricCpuUtilization(metricOptions),
             ]),
@@ -92,6 +95,7 @@ export class ECSAlbMultiServiceMonitorConstruct extends Construct {
     private createAlarms(serviceConfig: ServiceConfig): void {
         const alarmTopic = new sns.Topic(this, `${serviceConfig.serviceName}-Alarm-Topic`, {
             displayName: `${this.props.stackName}-${serviceConfig.serviceName}-Alarm-Topic`,
+            topicName: `${this.props.stackName}-${serviceConfig.serviceName}-Alarm-Topic`
         });
 
         serviceConfig.subscriptionEmails.forEach((email) =>

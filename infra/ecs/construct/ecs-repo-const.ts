@@ -29,6 +29,7 @@ export class ECSRepoConstruct extends Construct {
 
         try {
             this.ecrRepo = ecr.Repository.fromRepositoryName(this, `${props.shortStackName}ExistingEcrRepository`, `${props.shortStackName}-${repoSuffix}`.toLowerCase()) as ecr.Repository;
+            
         } catch (error) {
             
             this.ecrRepo = new ecr.Repository(this, `${props.shortStackName}EcrRepository`, {

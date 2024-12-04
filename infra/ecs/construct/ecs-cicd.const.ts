@@ -5,22 +5,29 @@ import * as codepipeline from 'aws-cdk-lib/aws-codepipeline';
 import * as actions from 'aws-cdk-lib/aws-codepipeline-actions';
 import * as ecr from 'aws-cdk-lib/aws-ecr';
 import * as ecs from 'aws-cdk-lib/aws-ecs';
+import * as events from 'aws-cdk-lib/aws-events';
+import * as eventsTargets from 'aws-cdk-lib/aws-events-targets';
 import * as iam from 'aws-cdk-lib/aws-iam';
+import * as sns from 'aws-cdk-lib/aws-sns';
 import { Construct } from 'constructs';
 
 export interface ECSCICDProps {
     service: ecs.IBaseService;
     containerName: string;
+
     repo: codecommit.IRepository;
     ecrRepo: ecr.IRepository;
     appPath: string;
-    dockerfileName?: string;
-    buildCommands?: string[];
-    enableKeyRotation?: boolean;
+
     githubOauthTokenArn?: string;
     githubRepo?: string;
     githubBranch?: string;
     pipelineName?: string;
+
+    dockerfileName?: string;
+    buildCommands?: string[];
+
+    enableNotifications?: boolean;
 }
 
 export class ECSCICDConstruct extends Construct {
@@ -32,40 +39,11 @@ export class ECSCICDConstruct extends Construct {
             throw new Error("Service, ECR Repository, and CodeCommit Repository are required.");
         }
 
-        const githubOauthToken = props.githubOauthTokenArn
-            ? cdk.SecretValue.secretsManager(props.githubOauthTokenArn)
-            : undefined;
-
         const sourceOutput = new codepipeline.Artifact();
-
-        const sourceAction = githubOauthToken
-            ? new actions.GitHubSourceAction({
-                actionName: "GitHub_Source",
-                owner: props.githubRepo?.split('/')[0] ?? "owner",
-                repo: props.githubRepo?.split('/')[1] ?? "repo",
-                oauthToken: githubOauthToken,
-                output: sourceOutput,
-                branch: props.githubBranch ?? "main",
-            })
-            : new actions.CodeCommitSourceAction({
-                actionName: "CodeCommit_Source",
-                repository: props.repo,
-                output: sourceOutput,
-                branch: props.githubBranch ?? "main",
-            });
+        const sourceAction = this.createSourceAction(props, sourceOutput);
 
         const buildOutput = new codepipeline.Artifact();
-
-        const buildAction = new actions.CodeBuildAction({
-            actionName: 'CodeBuild_DockerBuild',
-            project: this.createBuildProject(props.ecrRepo, props),
-            input: sourceOutput,
-            outputs: [buildOutput]
-        });
-
-        const approvalAction = new actions.ManualApprovalAction({
-            actionName: 'Manual_Approve',
-        });
+        const buildAction = this.createBuildAction(props, sourceOutput, buildOutput);
 
         const deployAction = new actions.EcsDeployAction({
             actionName: 'ECS_ContainerDeploy',
@@ -74,9 +52,8 @@ export class ECSCICDConstruct extends Construct {
             deploymentTimeout: cdk.Duration.minutes(60)
         });
 
-        new codepipeline.Pipeline(this, 'ECSServicePipeline', {
+        const pipeline = new codepipeline.Pipeline(this, 'ECSServicePipeline', {
             pipelineName: props.pipelineName ?? `${cdk.Stack.of(this).stackName}-Pipeline`,
-            enableKeyRotation: props.enableKeyRotation ?? true,
             stages: [
                 {
                     stageName: 'Source',
@@ -87,16 +64,25 @@ export class ECSCICDConstruct extends Construct {
                     actions: [buildAction],
                 },
                 {
-                    stageName: 'Approve',
-                    actions: [approvalAction],
-                },
-                {
                     stageName: 'Deploy',
                     actions: [deployAction],
                 }
             ]
         });
 
+        if(props.enableNotifications) {
+            this.createNotificationStage(pipeline);
+        }
+    }
+
+    private createBuildAction(props: ECSCICDProps, sourceOutput: codepipeline.Artifact, buildOutput: codepipeline.Artifact): actions.CodeBuildAction {
+        const buildProject = this.createBuildProject(props.ecrRepo, props);
+        return new actions.CodeBuildAction({
+            actionName: 'CodeBuild_DockerBuild',
+            project: buildProject,
+            input: sourceOutput,
+            outputs: [buildOutput],
+        });
     }
 
     private createBuildProject(ecrRepo: ecr.IRepository, props: ECSCICDProps): codebuild.Project {
@@ -175,5 +161,55 @@ export class ECSCICDConstruct extends Construct {
         policy.addStatements(statement);
 
         role.attachInlinePolicy(policy);
+    }
+
+    private createSourceAction(props: ECSCICDProps, sourceOutput: codepipeline.Artifact): actions.Action {
+        const githubOauthToken = props.githubOauthTokenArn
+            ? cdk.SecretValue.secretsManager(props.githubOauthTokenArn)
+            : undefined;
+
+        if (githubOauthToken) {
+
+            return new actions.GitHubSourceAction({
+                actionName: "GitHub_Source",
+                owner: props.githubRepo?.split('/')[0] ?? "owner",
+                repo: props.githubRepo?.split('/')[1] ?? "repo",
+                oauthToken: githubOauthToken,
+                output: sourceOutput,
+                branch: props.githubBranch ?? "main",
+            });
+        }
+
+        return new actions.CodeCommitSourceAction({
+            actionName: "CodeCommit_Source",
+            repository: props.repo,
+            output: sourceOutput,
+            branch: props.githubBranch ?? "main",
+        });
+    }
+
+    private createNotificationStage(pipeline: codepipeline.Pipeline): void {
+        const snsTopic = new sns.Topic(this, "PipelineNotification");
+
+        new sns.Subscription(this, 'EmailSubscription', {
+            topic: snsTopic,
+            endpoint: "chaudharyashlok@gmail.com",
+            protocol: sns.SubscriptionProtocol.EMAIL
+        });
+
+        const pipelineSuccessRule = new events.Rule(this, 'PipelineSuccessRule', {
+            eventPattern: {
+                source: ['aws.codepipeline'],
+                detailType: ['CodePipeline Pipeline Execution State Change'],
+                detail: {
+                    pipeline: [pipeline.pipelineName],
+                    state: ['SUCCEEDED'],
+                }
+            }
+        });
+
+        pipelineSuccessRule.addTarget(new eventsTargets.SnsTopic(snsTopic));
+
+        snsTopic.grantPublish(new iam.ServicePrincipal('events.amazonaws.com'));
     }
 }
