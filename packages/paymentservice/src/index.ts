@@ -20,7 +20,7 @@ import "./services/intermessage.service";
 
 const typeDefs = gql`${fs.readFileSync(path.join(__dirname, 'graphql', 'schema.graphql'), 'utf8')}`;
 
-const PORT = process.env.PORT ?? 4002;
+const PORT = process.env.PORT ?? 4003;
 
 
 console.log("RABBITMQ: ", process.env.RABBITMQ_URL);

@@ -84,7 +84,7 @@ export class ECSAlbServiceStack extends cdk.Stack {
                 githubRepo: "Ashlok2003/ShopxIndia",
                 githubOauthTokenArn: "github-token",
                 pipelineName: serviceConfig.ServiceName,
-                enableNotifications: true
+                enableNotifications: false
             });
 
             return {

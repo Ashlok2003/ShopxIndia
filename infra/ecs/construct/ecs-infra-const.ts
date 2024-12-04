@@ -59,10 +59,11 @@ export class ECSInfraConstruct extends Construct {
         });
 
         const targetGroup = albFargateService.targetGroup;
+        
         targetGroup.configureHealthCheck({
             path: '/health', 
             interval: cdk.Duration.seconds(30), 
-            timeout: cdk.Duration.seconds(5), 
+            timeout: cdk.Duration.seconds(15), 
             healthyThresholdCount: 2,
             unhealthyThresholdCount: 5,
         });

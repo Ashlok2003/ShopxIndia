@@ -19,7 +19,7 @@ import { graphqlUploadExpress } from "graphql-upload-ts";
 
 const typeDefs = gql`${fs.readFileSync(path.join(__dirname, 'graphql', 'schema.graphql'), 'utf8')}`;
 
-const PORT = process.env.PORT ?? 4003;
+const PORT = process.env.PORT ?? 4005;
 
 
 const app: Express = express();

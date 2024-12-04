@@ -32,6 +32,6 @@ COPY --from=builder build/node_modules node_modules/
 COPY --from=builder /build/dist ./dist/
 COPY --from=builder /build/prisma ./prisma
 
-EXPOSE 4002
+EXPOSE 4003
 
 CMD [ "npm", "start" ]
