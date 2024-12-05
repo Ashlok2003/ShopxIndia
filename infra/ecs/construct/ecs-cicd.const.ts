@@ -70,7 +70,7 @@ export class ECSCICDConstruct extends Construct {
             ]
         });
 
-        if(props.enableNotifications) {
+        if (props.enableNotifications) {
             this.createNotificationStage(pipeline);
         }
     }
@@ -128,14 +128,15 @@ export class ECSCICDConstruct extends Construct {
                     post_build: {
                         commands: [
                             'echo Creating imagedefinitions.json file...',
+                            "pwd",
                             "printf '[{\"name\":\"%s\",\"imageUri\":\"%s\"}]' $CONTAINER_NAME $ECR_REPO_URI:$TAG > imagedefinitions.json",
-                            'cat imagedefinitions.json',
+                            "pwd; ls -al; cat imagedefinitions.json"
                         ]
                     }
                 },
                 artifacts: {
-                    files: ['imagedefinitions.json'],
-                }
+                    files: [`${appPath}/imagedefinitions.json`],
+                },
             }),
         });
 
